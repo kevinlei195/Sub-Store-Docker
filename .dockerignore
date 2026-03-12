@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Docs
+docs/
+README.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Node/Bun
+node_modules/
+bun.lockb
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Misc
+*.zip
+*.tar.gz

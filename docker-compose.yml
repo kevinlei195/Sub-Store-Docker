@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  sub-store:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sub-store
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    volumes:
+      - sub-store-data:/app/data
+    env_file:
+      - .env
+
+volumes:
+  sub-store-data:
