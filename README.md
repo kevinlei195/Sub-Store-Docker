@@ -1,6 +1,6 @@
 # Sub-Store Docker 部署
 
-基于 [Sub-Store](https://github.com/sub-store/Sub-Store) 的 Docker 镜像，支持 Caddy 反向代理和定时任务。
+基于 [Sub-Store](https://github.com/sub-store/Sub-Store) 的 Docker 镜像，自动下载最新版本，支持 Caddy 反向代理和定时任务。
 
 ## 功能特性
 
@@ -16,8 +16,8 @@
 ### 1. 克隆项目
 
 ```bash
-git clone <your-repo>
-cd express-sub-store
+git clone https://github.com/kevinlei195/Sub-Store-Docker.git
+cd Sub-Store-Docker
 ```
 
 ### 2. 配置环境变量
@@ -25,10 +25,10 @@ cd express-sub-store
 创建 `.env` 文件：
 
 ```bash
-cp backend/.env.example backend/.env
+cp docker-compose.env.example .env
 ```
 
-编辑 `backend/.env`：
+编辑 `.env`：
 
 ```env
 API_TOKEN=your_secure_api_token
@@ -38,19 +38,7 @@ DOWNLOAD_TOKEN=your_secure_download_token
 ### 3. 启动服务
 
 ```bash
-# 使用 Docker Compose
 docker-compose up -d
-
-# 或使用 Docker
-docker build -t sub-store ./backend
-docker run -d \
-  -p 3000:3000 \
-  -p 80:80 \
-  -e API_TOKEN=your_token \
-  -e DOWNLOAD_TOKEN=your_token \
-  -v /path/to/frontend:/git/public:ro \
-  --name sub-store \
-  sub-store
 ```
 
 ## 配置说明
@@ -61,6 +49,10 @@ docker run -d \
 |------|------|------|
 | `API_TOKEN` | 是 | API 认证 Token |
 | `DOWNLOAD_TOKEN` | 是 | 下载认证 Token |
+| `CRON_SYNC_ENABLED` | 否 | 启用同步任务 (默认 true) |
+| `CRON_SYNC_INTERVAL` | 否 | 同步间隔小时 (默认 6) |
+| `CRON_REFRESH_ENABLED` | 否 | 启用刷新任务 (默认 true) |
+| `CRON_REFRESH_INTERVAL` | 否 | 刷新间隔小时 (默认 12) |
 
 ### 端口映射
 
@@ -71,9 +63,11 @@ docker run -d \
 
 ### 路由规则
 
-- `/api/*` - 需要 `Authorization: Bearer <token>` 头部
-- `/download/*` - 需要 `?d_token=<token>` 查询参数
-- 其他路径 - 静态文件服务 (需要挂载前端到 `/git/public`)
+| 路径 | 认证方式 | 说明 |
+|------|----------|------|
+| `/api/*` | `Authorization: Bearer <token>` | API 接口 |
+| `/download/*` | `?d_token=<token>` | 下载链接 |
+| 其他 | 无 | 静态前端 |
 
 ### 定时任务
 
@@ -84,58 +78,18 @@ docker run -d \
 | `0 */6 * * *` | `/api/sync/artifacts` (每6小时) |
 | `0 */12 * * *` | `/api/utils/refresh` (每12小时) |
 
-## 前端部署
-
-### 方式一：本地静态文件
-
-1. 下载 Sub-Store 前端静态文件
-2. 挂载到容器 `/git/public` 目录：
-
-```bash
-# Docker Compose
-FRONTEND_PATH=/path/to/your/frontend docker-compose up -d
-
-# 或 Docker
--v /path/to/frontend:/git/public:ro
-```
-
-### 方式二：远程前端
-
-直接使用官方前端：https://sub-store.vercel.app
-
-配置后端地址：`https://sub-store.vercel.app?api=http://your-server:80`
-
-## 常用命令
-
-```bash
-# 启动
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
-
-# 停止
-docker-compose down
-
-# 重启
-docker-compose restart
-
-# 重新构建
-docker-compose build --no-cache
-```
-
 ## 目录结构
 
 ```
 .
-├── backend/
-│   ├── Dockerfile          # Docker 构建文件
-│   ├── Caddyfile          # Caddy 配置
-│   ├── .env               # 环境变量
-│   ├── package.json       # Node 依赖
-│   └── sub-store.min.js   # 应用代码
+├── Dockerfile              # Docker 构建文件
+├── Caddyfile              # Caddy 配置
+├── supervisord.conf       # 进程管理配置
+├── entrypoint.sh          # 启动脚本
 ├── compose.yml            # Docker Compose 配置
-├── data/                  # 数据目录 (运行时创建)
+├── docker-compose.env.example  # 环境变量示例
+├── backend/
+│   └── package.json       # Node 依赖
 └── README.md              # 本文档
 ```
 
@@ -158,12 +112,45 @@ curl http://localhost:80/api/
 http://localhost:80/download/xxx?d_token=your_download_token
 ```
 
+## 常用命令
+
+```bash
+# 启动
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+
+# 停止
+docker-compose down
+
+# 重启
+docker-compose restart
+
+# 重新构建
+docker-compose build --no-cache
+```
+
+## 使用 GitHub 镜像
+
+如果不想本地构建，可以使用 GitHub Container Registry 的预构建镜像：
+
+```bash
+# 复制示例配置
+cp docker-compose.example.yml docker-compose.yml
+cp docker-compose.env.example .env
+
+# 编辑 .env 填入 token
+# 启动
+docker-compose up -d
+```
+
 ## 故障排查
 
 ### 查看日志
 
 ```bash
-docker-compose logs sub-store
+docker-compose logs -f
 ```
 
 ### 检查容器状态
@@ -182,6 +169,12 @@ docker-compose exec sub-store sh
 
 ```bash
 docker-compose exec sub-store crontab -l
+```
+
+### 检查进程状态
+
+```bash
+docker-compose exec sub-store supervisord ctl status
 ```
 
 ## License

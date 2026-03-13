@@ -5,7 +5,10 @@
 :80 {
     encode gzip
 
-    # 代理所有非静态文件的请求到后端
+    @api_auth header Authorization "Bearer {env.API_TOKEN}"
+    @download_auth query d_token={env.DOWNLOAD_TOKEN}
+
+    # 静态资源
     @static {
         path /favicon.ico
         path /static/*
@@ -15,10 +18,28 @@
         path /index.html
     }
 
+    # API 需要 Bearer Token
+    handle /api/* {
+        handle @api_auth {
+            reverse_proxy localhost:3000
+        }
+        respond "Unauthorized" 401
+    }
+
+    # 下载需要 d_token
+    handle /download/* {
+        handle @download_auth {
+            reverse_proxy localhost:3000
+        }
+        respond "d_token不正确或未提供" 401
+    }
+
+    # 静态文件
     handle @static {
         root * /app/frontend/dist
         file_server
     }
 
+    # 其他请求代理到后端
     reverse_proxy localhost:3000
 }
