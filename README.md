@@ -2,6 +2,17 @@
 
 基于 [Sub-Store](https://github.com/sub-store/Sub-Store) 的 Docker 镜像，自动下载最新版本，支持 Caddy 反向代理和定时任务。
 
+## Usage
+
+```
+http://localhost:3000/api/utils/env
+
+https://sub-store.vercel.app/subs
+
+http://localhost:3000/download/my?target=JSON
+http://localhost/download/my?target=JSON&d_token=mydltoken
+```
+
 ## 功能特性
 
 - 🚀 Node.js 后端 (端口 3000)
