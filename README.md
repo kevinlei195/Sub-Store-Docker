@@ -1,161 +1,189 @@
-# Sub-Store Docker
+# Sub-Store Docker 部署
 
-使用 Docker 部署 Sub-Store (后端 + 前端)，集成定时任务和 GitHub Gist 备份功能。
-
-参考项目：
-https://github.com/SaintWe/Sub-Store-Docker/
-参考：
-https://hub.docker.com/r/xream/sub-store
-https://hub.docker.com/layers/xream/sub-store/latest/images/sha256-60f0a0dcdaee0cb107454d217753e7d8d92f23524310bb2dd5960e7a41cd37b8
+基于 [Sub-Store](https://github.com/sub-store/Sub-Store) 的 Docker 镜像，支持 Caddy 反向代理和定时任务。
 
 ## 功能特性
 
-- **前后端整合** - 后端 API + 前端 UI 一站式部署
-- **路径密钥认证** - 使用 `SUB_STORE_FRONTEND_BACKEND_PATH` 保护后端
-- **定时任务** - 自动同步订阅、刷新远程订阅 (使用 node-cron)
-- **GitHub Gist 备份** - 自动备份和恢复配置
-- **自动更新** - 每次构建自动获取 GitHub 最新版本
-- **数据持久化** - 订阅数据保存在 Docker 卷中
-
-## 版本信息
-
-- 后端: [Sub-Store](https://github.com/sub-store-org/Sub-Store/releases) (自动获取 latest)
-- 前端: [Sub-Store-Front-End](https://github.com/sub-store-org/Sub-Store-Front-End/releases) (自动获取 latest)
+- 🚀 Node.js 后端 (端口 3000)
+- 🌐 Caddy 反向代理 (端口 80)
+- 🔒 API 认证 (Bearer Token)
+- 📥 下载认证 (d_token)
+- ⏰ 内置定时任务 (每6小时/12小时)
+- 📦 Docker Compose 一键部署
 
 ## 快速开始
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-repo/Sub-Store-Docker.git
-cd Sub-Store-Docker
+git clone <your-repo>
+cd express-sub-store
 ```
 
 ### 2. 配置环境变量
 
+创建 `.env` 文件：
+
 ```bash
-cp .env.example .env
-nano .env
+cp backend/.env.example backend/.env
 ```
 
-必须修改的配置：
+编辑 `backend/.env`：
 
-```bash
-# 必填：设置后端路径密钥
-SUB_STORE_FRONTEND_BACKEND_PATH=your-secret-path-here
+```env
+API_TOKEN=your_secure_api_token
+DOWNLOAD_TOKEN=your_secure_download_token
 ```
 
 ### 3. 启动服务
 
 ```bash
-docker-compose up -d --build
+# 使用 Docker Compose
+docker-compose up -d
+
+# 或使用 Docker
+docker build -t sub-store ./backend
+docker run -d \
+  -p 3000:3000 \
+  -p 80:80 \
+  -e API_TOKEN=your_token \
+  -e DOWNLOAD_TOKEN=your_token \
+  -v /path/to/frontend:/git/public:ro \
+  --name sub-store \
+  sub-store
 ```
 
-### 4. 访问
+## 配置说明
 
-- 前端: http://localhost:3000
-- 带密钥访问: http://localhost:3000/your-secret-path-here
+### 环境变量
 
-## 环境变量说明
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `API_TOKEN` | 是 | API 认证 Token |
+| `DOWNLOAD_TOKEN` | 是 | 下载认证 Token |
 
-| 变量 | 必填 | 说明 | 示例 |
-|------|------|------|------|
-| `SUB_STORE_FRONTEND_BACKEND_PATH` | ✅ | 后端路径密钥 | `/secret123` |
-| `SUB_STORE_BACKEND_SYNC_CRON` | - | 同步订阅定时 | `0 */6 * * *` |
-| `SUB_STORE_BACKEND_REFRESH_CRON` | - | 刷新订阅定时 | `0 */12 * * *` |
-| `GITHUB_USERNAME` | - | GitHub 用户名 | `yourname` |
-| `GITHUB_TOKEN` | - | GitHub Token | `ghp_xxx` |
-| `SUB_STORE_BACKEND_UPLOAD_CRON` | - | 上传备份定时 | `55 23 * * 6` |
-| `SUB_STORE_BACKEND_DOWNLOAD_CRON` | - | 下载恢复定时 | `30 2 * * 0` |
-| `SUB_STORE_FRONTEND_BACKEND_URL` | - | 反向代理地址 | `http://localhost:3000` |
+### 端口映射
 
-## Cron 表达式示例
+| 端口 | 服务 |
+|------|------|
+| 3000 | Node.js 后端 (原始) |
+| 80 | Caddy 反向代理 |
 
-| 表达式 | 说明 |
-|--------|------|
-| `0 * * * *` | 每小时 |
-| `0 */6 * * *` | 每 6 小时 |
-| `0 */12 * * *` | 每 12 小时 |
-| `0 0 * * *` | 每天午夜 |
-| `0 0 * * 0` | 每周日午夜 |
-| `55 23 * * 6` | 每周六 23:55 |
+### 路由规则
 
-## 使用场景
+- `/api/*` - 需要 `Authorization: Bearer <token>` 头部
+- `/download/*` - 需要 `?d_token=<token>` 查询参数
+- 其他路径 - 静态文件服务 (需要挂载前端到 `/git/public`)
 
-### 场景一：本地使用
+### 定时任务
+
+内置 Crontab 任务：
+
+| 时间 | 任务 |
+|------|------|
+| `0 */6 * * *` | `/api/sync/artifacts` (每6小时) |
+| `0 */12 * * *` | `/api/utils/refresh` (每12小时) |
+
+## 前端部署
+
+### 方式一：本地静态文件
+
+1. 下载 Sub-Store 前端静态文件
+2. 挂载到容器 `/git/public` 目录：
 
 ```bash
-SUB_STORE_FRONTEND_BACKEND_PATH=mysecret
+# Docker Compose
+FRONTEND_PATH=/path/to/your/frontend docker-compose up -d
+
+# 或 Docker
+-v /path/to/frontend:/git/public:ro
 ```
 
-访问: http://localhost:3000/mysecret
+### 方式二：远程前端
 
-### 场景二：定时同步订阅
+直接使用官方前端：https://sub-store.vercel.app
+
+配置后端地址：`https://sub-store.vercel.app?api=http://your-server:80`
+
+## 常用命令
 
 ```bash
-SUB_STORE_BACKEND_SYNC_CRON=0 */6 * * *
-```
-
-### 场景三：GitHub Gist 备份
-
-```bash
-GITHUB_USERNAME=yourname
-GITHUB_TOKEN=ghp_xxxxxxxxxxxx
-SUB_STORE_BACKEND_UPLOAD_CRON=55 23 * * 6
-SUB_STORE_BACKEND_DOWNLOAD_CRON=30 2 * * 0
-```
-
-### 场景四：Nginx 反向代理
-
-```bash
-SUB_STORE_FRONTEND_BACKEND_PATH=secret123
-SUB_STORE_FRONTEND_BACKEND_URL=http://localhost:3000
-```
-
-Nginx 配置：
-
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:3000;
-}
-```
-
-## 命令
-
-```bash
-# 构建并启动
-docker-compose up -d --build
+# 启动
+docker-compose up -d
 
 # 查看日志
 docker-compose logs -f
 
-# 停止服务
+# 停止
 docker-compose down
 
-# 重启服务
+# 重启
 docker-compose restart
 
-# 查看状态
+# 重新构建
+docker-compose build --no-cache
+```
+
+## 目录结构
+
+```
+.
+├── backend/
+│   ├── Dockerfile          # Docker 构建文件
+│   ├── Caddyfile          # Caddy 配置
+│   ├── .env               # 环境变量
+│   ├── package.json       # Node 依赖
+│   └── sub-store.min.js   # 应用代码
+├── compose.yml            # Docker Compose 配置
+├── data/                  # 数据目录 (运行时创建)
+└── README.md              # 本文档
+```
+
+## 认证示例
+
+### API 请求
+
+```bash
+# 带认证的 API 请求
+curl -H "Authorization: Bearer your_api_token" http://localhost:80/
+
+# 不带认证 (返回 401)
+curl http://localhost:80/api/
+```
+
+### 下载请求
+
+```bash
+# 带 d_token 的下载
+http://localhost:80/download/xxx?d_token=your_download_token
+```
+
+## 故障排查
+
+### 查看日志
+
+```bash
+docker-compose logs sub-store
+```
+
+### 检查容器状态
+
+```bash
 docker-compose ps
 ```
 
-## 数据持久化
-
-订阅数据存储在 Docker 卷 `sub-store-data` 中：
+### 进入容器
 
 ```bash
-# 查看卷
-docker volume ls | grep sub-store
-
-# 备份卷
-docker run --rm -v sub-store-data:/data -v $(pwd):/backup alpine tar czf /backup/backup.tar.gz /data
-
-# 恢复卷
-docker run --rm -v sub-store-data:/data -v $(pwd):/backup alpine tar xzf /backup/backup.tar.gz -C /
+docker-compose exec sub-store sh
 ```
 
-## 文档
+### 检查 Crontab
 
-- [Docker 部署指南](./docs/DOCKER-DEPLOY.md) - 完整 Docker 部署说明
-- [认证机制说明](./docs/SUB-STORE-AUTH.md) - 路径密钥认证详解
-- [Sub-Store 官方 Wiki](https://github.com/sub-store-org/Sub-Store/wiki)
+```bash
+docker-compose exec sub-store crontab -l
+```
+
+## License
+
+MIT
