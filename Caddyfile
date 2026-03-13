@@ -10,6 +10,7 @@
 
     # 静态资源
     @static {
+        path /
         path /favicon.ico
         path /static/*
         path /index.js
@@ -37,6 +38,7 @@
     # 静态文件
     handle @static {
         root * /app/frontend/dist
+        try_files {path} /index.html
         file_server
     }
 
