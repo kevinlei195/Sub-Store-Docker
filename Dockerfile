@@ -26,4 +26,7 @@ RUN mkdir -p /etc/caddy /var/log/caddy
 # Cron
 RUN touch /etc/crontabs/root && chmod 0644 /etc/crontabs/root
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 ENTRYPOINT ["/entrypoint.sh"]

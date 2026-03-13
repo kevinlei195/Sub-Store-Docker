@@ -5,26 +5,20 @@
 :80 {
     encode gzip
 
-    @api_auth header Authorization "Bearer {env.API_TOKEN}"
-    @download_auth query d_token={env.DOWNLOAD_TOKEN}
-
-    handle /api/* {
-        handle @api_auth {
-            reverse_proxy localhost:3000
-        }
-        respond "Unauthorized" 401
+    # 代理所有非静态文件的请求到后端
+    @static {
+        path /favicon.ico
+        path /static/*
+        path /index.js
+        path /main.js
+        path /main.css
+        path /index.html
     }
 
-    handle /download/* {
-        handle @download_auth {
-            reverse_proxy localhost:3000
-        }
-        respond "d_token不正确或未提供" 401
-    }
-
-    handle {
-        root * /app/frontend
-        try_files {path} /index.html
+    handle @static {
+        root * /app/frontend/dist
         file_server
     }
+
+    reverse_proxy localhost:3000
 }
