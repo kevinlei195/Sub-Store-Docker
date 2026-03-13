@@ -17,11 +17,15 @@ RUN apk add --no-cache \
     nodejs \
     npm
 
+COPY --from=ochinchina/supervisord:latest /usr/local/bin/supervisord /usr/local/bin/supervisord
+
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/sub-store.min.js ./
 COPY --from=builder /app/.env ./
+
+COPY supervisord.conf /etc/supervisord.conf
 
 RUN mkdir -p /etc/caddy && \
     mkdir -p /var/log/caddy
@@ -34,5 +38,3 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 80 443 3000
 
 ENTRYPOINT ["/entrypoint.sh"]
-
-CMD ["node", "sub-store.min.js", "crond", "-f", "-l", "2", "caddy", "run", "--config", "/etc/caddy/Caddyfile"]
