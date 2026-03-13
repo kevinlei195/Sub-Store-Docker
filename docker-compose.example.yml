@@ -16,7 +16,6 @@ services:
       - CRON_REFRESH_INTERVAL=${CRON_REFRESH_INTERVAL:-12}
     volumes:
       - ./data:/app/data
-      - ${FRONTEND_PATH:-./frontend}:/git/public:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]

@@ -1,0 +1,30 @@
+{
+    admin off
+}
+
+:80 {
+    encode gzip
+
+    @api_auth header Authorization "Bearer {env.API_TOKEN}"
+    @download_auth query d_token={env.DOWNLOAD_TOKEN}
+
+    handle /api/* {
+        handle @api_auth {
+            reverse_proxy localhost:3000
+        }
+        respond "Unauthorized" 401
+    }
+
+    handle /download/* {
+        handle @download_auth {
+            reverse_proxy localhost:3000
+        }
+        respond "d_token不正确或未提供" 401
+    }
+
+    handle {
+        root * /app/frontend
+        try_files {path} /index.html
+        file_server
+    }
+}

@@ -18,3 +18,12 @@ dist/
 
 # Temp files
 excalidraw.log
+
+
+# dist.zip
+dist.zip
+
+# Environment files
+.env
+.env.*
+!.env.example

@@ -6,9 +6,10 @@ on:
       - main
     paths:
       - 'compose.yml'
-      - '**.yml'
-      - 'backend/**'
       - 'Dockerfile'
+      - 'entrypoint.sh'
+      - 'supervisord.conf'
+      - 'backend/package.json'
       - '.github/workflows/**'
   workflow_dispatch:
   schedule:
@@ -56,8 +57,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
-          file: ./backend/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
