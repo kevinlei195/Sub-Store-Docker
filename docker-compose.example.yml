@@ -1,0 +1,25 @@
+# Sub-Store Docker Compose (使用 GitHub 镜像)
+
+services:
+  sub-store:
+    image: ghcr.io/kevinlei195/sub-store-docker:latest
+    container_name: sub-store
+    ports:
+      - "3000:3000"
+      - "80:80"
+    environment:
+      - API_TOKEN=${API_TOKEN}
+      - DOWNLOAD_TOKEN=${DOWNLOAD_TOKEN}
+      - CRON_SYNC_ENABLED=${CRON_SYNC_ENABLED:-true}
+      - CRON_SYNC_INTERVAL=${CRON_SYNC_INTERVAL:-6}
+      - CRON_REFRESH_ENABLED=${CRON_REFRESH_ENABLED:-true}
+      - CRON_REFRESH_INTERVAL=${CRON_REFRESH_INTERVAL:-12}
+    volumes:
+      - ./data:/app/data
+      - ${FRONTEND_PATH:-./frontend}:/git/public:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
