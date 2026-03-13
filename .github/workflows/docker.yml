@@ -5,10 +5,9 @@ on:
     branches:
       - main
     paths:
+      - 'compose.yml'
       - '**.yml'
-      - '**.yaml'
-      - '**.js'
-      - '**.json'
+      - 'backend/**'
       - 'Dockerfile'
       - '.github/workflows/**'
   workflow_dispatch:
@@ -57,7 +56,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./backend
+          file: ./backend/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
